@@ -427,6 +427,7 @@ export default function SettingsPanel(props: SidebarProps) {
               items={[
                 { id: 'falling-notes', name: 'Falling notes' },
                 { id: 'sheet', name: 'Sheet hero (beta)' },
+                { id: 'standard-sheet', name: 'Standard Sheet Music' },
               ]}
             >
               {(item) => <SelectItem>{item.name}</SelectItem>}

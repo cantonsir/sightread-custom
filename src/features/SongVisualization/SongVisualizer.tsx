@@ -3,10 +3,12 @@ import * as touchscroll from '@/features/SongVisualization/touchscroll'
 import { transposeKeySignature } from '@/features/theory'
 import { useSize } from '@/hooks'
 import { Hand, Song, SongConfig } from '@/types'
+import { useAtomValue } from 'jotai'
 import { LegacyRef, useEffect, useMemo, useRef } from 'react'
 import { usePlayer } from '../player'
 import { GivenState, render } from './canvas-renderer'
 import { waitForImages } from './images'
+import OsmdWrapper from './OsmdWrapper'
 import { PIXELS_PER_SECOND as pps } from './utils'
 
 type HandSettings = {
@@ -25,6 +27,7 @@ type CanvasRendererProps = {
   selectedRange?: { start: number; end: number }
   enableTouchscroll?: boolean
   game?: boolean
+  xml?: string | File
 }
 
 function CanvasRenderer({
@@ -37,11 +40,13 @@ function CanvasRenderer({
   constrictView = true,
   enableTouchscroll = false,
   game = false,
+  xml,
 }: CanvasRendererProps) {
   const isReady = useRef(false)
   const { width, height, measureRef } = useSize()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const player = usePlayer()
+  const playerState = useAtomValue(player.state)
 
   useEffect(() => {
     waitForImages().then(() => (isReady.current = true))
@@ -85,6 +90,20 @@ function CanvasRenderer({
       player,
     }
     render(state)
+  }
+
+  if (config.visualization === 'standard-sheet') {
+    return (
+      <div className="absolute h-full w-full touch-none bg-white">
+        {xml ? (
+          <OsmdWrapper xml={xml} time={getTime()} isPlaying={playerState === 'Playing'} />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-gray-500">
+            Loading standard sheet music...
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (

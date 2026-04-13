@@ -1,5 +1,5 @@
 import Toast from '@/components/Toast'
-import { useSong } from '@/features/data'
+import { useMusicXML, useSong } from '@/features/data'
 import { useSongMetadata } from '@/features/data/library'
 import midiState from '@/features/midi'
 import { requiresPermissionAtom, scanFolders } from '@/features/persist/persistence'
@@ -126,6 +126,14 @@ export default function PlaySongPage() {
   const synth = useLazyStableRef(() => getSynthStub('acoustic_grand_piano'))
   let { data: song, error, isLoading, mutate } = useSong(id, source)
   let songMeta = useSongMetadata(id, source)
+
+  // Fetch XML file if requested by the current visualization mode
+  const { data: musicXML } = useMusicXML(
+    source,
+    songMeta?.xmlFile,
+    songMeta?.xmlHandle,
+  )
+
   const range = useAtomValue(player.getRange())
   const selectedRange = useMemo(
     () => (range ? { start: range[0], end: range[1] } : undefined),
@@ -430,6 +438,7 @@ export default function PlaySongPage() {
             selectedRange={selectedRange}
             getTime={() => player.getTime()}
             enableTouchscroll={songConfig.visualization === 'falling-notes'}
+            xml={musicXML}
           />
           {playerState.countingDown && countdownTotal > 0 && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

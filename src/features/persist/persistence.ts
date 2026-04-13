@@ -157,6 +157,8 @@ initialize()
 
 async function scanFolder(dir: LocalDir): Promise<SongMetadata[]> {
   const songs: SongMetadata[] = []
+  const midFiles: { file: File; handle: FileSystemFileHandle; name: string }[] = []
+  const xmlHandles = new Map<string, FileSystemFileHandle>()
 
   try {
     for await (const [name, handle] of dir.handle.entries()) {
@@ -164,29 +166,42 @@ async function scanFolder(dir: LocalDir): Promise<SongMetadata[]> {
         const fileHandle = handle as FileSystemFileHandle
         const file = await fileHandle.getFile()
 
-        try {
-          if (isMidiFile(file)) {
-            const title = name
-            const id = title // for now
-
-            let buffer = await file.arrayBuffer()
-            let bytes = new Uint8Array(buffer)
-            let duration = parseMidi(bytes).duration
-            const songMetadata: SongMetadata = {
-              id: dir.id + '/' + name,
-              title,
-              file: id,
-              source: 'local',
-              difficulty: 0,
-              duration,
-              handle: fileHandle,
-            }
-
-            songs.push(songMetadata)
-          }
-        } catch (error) {
-          console.error(`Error parsing MIDI file ${name}:`, error)
+        if (isMidiFile(file)) {
+          midFiles.push({ file, handle: fileHandle, name })
+        } else if (file.name.endsWith('.mxl') || file.name.endsWith('.musicxml')) {
+          const baseName = name.replace(/\.(mxl|musicxml)$/i, '')
+          xmlHandles.set(baseName, fileHandle)
         }
+      }
+    }
+
+    for (const { file, handle, name } of midFiles) {
+      try {
+        const title = name
+        const id = title // for now
+        const baseName = name.replace(/\.(mid|midi)$/i, '')
+
+        let buffer = await file.arrayBuffer()
+        let bytes = new Uint8Array(buffer)
+        let duration = parseMidi(bytes).duration
+        const songMetadata: SongMetadata = {
+          id: dir.id + '/' + name,
+          title,
+          file: id,
+          source: 'local',
+          difficulty: 0,
+          duration,
+          handle: handle,
+        }
+
+        if (xmlHandles.has(baseName)) {
+          songMetadata.xmlHandle = xmlHandles.get(baseName)
+          songMetadata.xmlFile = baseName + '.mxl' // Set a fallback string
+        }
+
+        songs.push(songMetadata)
+      } catch (error) {
+        console.error(`Error parsing MIDI file ${name}:`, error)
       }
     }
   } catch (error) {

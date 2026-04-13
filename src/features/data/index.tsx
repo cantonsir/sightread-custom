@@ -47,3 +47,26 @@ async function fetchSong(id: string, source: SongSource): Promise<Song> {
 export function useSong(id: string, source: SongSource): SWRResponse<Song, any, any> {
   return useSWRImmutable([id, source], ([id, source]) => fetchSong(id, source))
 }
+
+export async function fetchMusicXML(
+  source: SongSource,
+  xmlFile?: string,
+  xmlHandle?: FileSystemFileHandle,
+): Promise<string | File> {
+  if (source === 'builtin' && xmlFile) {
+    return '/' + xmlFile
+  } else if (source === 'local' && xmlHandle) {
+    return await xmlHandle.getFile()
+  }
+  return Promise.reject(new Error('No XML file available for this song'))
+}
+
+export function useMusicXML(
+  source: SongSource,
+  xmlFile?: string,
+  xmlHandle?: FileSystemFileHandle,
+): SWRResponse<string | File, any, any> {
+  // Only try fetching if we actually have an xml reference
+  const key = xmlFile || xmlHandle?.name || null
+  return useSWRImmutable(key ? ['xml', key] : null, () => fetchMusicXML(source, xmlFile, xmlHandle))
+}
